@@ -63,16 +63,17 @@ private:
 
     ElementInfo next_element(ElementInfo const& current_element) const {
         if (current_element.element_offset + 1 < parts[current_element.part_index].size())
-            return ElementInfo(current_element.part_index, current_element.element_offset + 1);
+            return ElementInfo { .part_index = current_element.part_index, .element_offset = current_element.element_offset + 1 };
         else
-            return ElementInfo(current_element.part_index + 1, 0);
+            return ElementInfo { .part_index = current_element.part_index + 1, .element_offset = 0 };
     }
 
     ElementInfo previous_element(ElementInfo const& current_element) const {
         if (current_element.element_offset > 0)
-            return ElementInfo(current_element.part_index, current_element.element_offset - 1);
+            return ElementInfo { .part_index = current_element.part_index, .element_offset = current_element.element_offset - 1 };
         else
-            return ElementInfo(current_element.part_index - 1, parts[current_element.part_index - 1].size() - 1);
+            return ElementInfo { .part_index     = current_element.part_index - 1,
+                                 .element_offset = parts[current_element.part_index - 1].size() - 1 };
     }
 
 public:
@@ -370,9 +371,7 @@ public:
 
     // Adding element via push_back is faster than [] operator
     void push_back(ElementT element) {
-        uint32_t const& index = size;
-
-        if (index == 0) {
+        if (size == 0) {
             part_count = 1;
             parts.resize(part_count);
             parts[0].push_back(element);
@@ -454,19 +453,29 @@ public:
     }
 
     iterator begin() noexcept {
-        return iterator(*this, ElementInfo(0, 0), 0);
+        return iterator(*this, ElementInfo { 0, 0 }, 0);
     }
 
     const_iterator begin() const noexcept {
-        return const_iterator(*this, ElementInfo(0, 0), 0);
+        return const_iterator(*this, ElementInfo { 0, 0 }, 0);
     }
 
     iterator end() noexcept {
-        return iterator(*this, ElementInfo(part_count - 1, parts[part_count - 1].size()), size);
+        return iterator(*this,
+                        ElementInfo {
+                            .part_index     = part_count - 1,
+                            .element_offset = static_cast<uint32_t>(parts[part_count - 1].size()),
+                        },
+                        size);
     }
 
     const_iterator end() const noexcept {
-        return const_iterator(*this, ElementInfo(part_count - 1, parts[part_count - 1].size()), size);
+        return const_iterator(*this,
+                              ElementInfo {
+                                  .part_index     = part_count - 1,
+                                  .element_offset = static_cast<uint32_t>(parts[part_count - 1].size()),
+                              },
+                              size);
     }
 };
 
