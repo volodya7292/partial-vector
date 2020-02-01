@@ -136,19 +136,19 @@ static void pv_unit_11(uint32_t size) {
     for (uint32_t i = 0; i < size; i++)
         v[i] = i;
 
-    auto data0 = v.get_data();
+    auto data0 = v.to_vector();
     for (uint32_t i = 0; i < size; i++)
         assert(data0[i] == i);
 
-    auto data1 = v.get_data(5);
+    auto data1 = v.to_vector(5);
     for (uint32_t i = 0; i < data1.size(); i++)
         assert(data1[i] == i + 5);
 
-    auto data2 = v.get_data(0, PARTIAL_VECTOR_PART_MAX_BYTE_SIZE / 8 + 10);
+    auto data2 = v.to_vector(0, PARTIAL_VECTOR_PART_MAX_BYTE_SIZE / 8 + 10);
     for (uint32_t i = 0; i < data2.size(); i++)
         assert(data2[i] == i);
 
-    auto data3 = v.get_data(5, 10);
+    auto data3 = v.to_vector(5, 10);
     for (uint32_t i = 0; i < data3.size(); i++)
         assert(data3[i] == i + 5);
 }
@@ -215,12 +215,23 @@ static void partial_vector_unit_tests() {
     pv_unit_11(PARTIAL_VECTOR_PART_MAX_BYTE_SIZE / 8 * 10 + 10);
 }
 
+#include <algorithm>
+
 int main() {
     partial_vector_unit_tests();
 
-    const partial_vector<int> ddd({ 5, 8, 2, 3 });
+    // std::vector<int> aa;
 
-    for (auto& d : ddd) {}
+    partial_vector<int> aa({ 5, 8, 2, 3 });
+    aa.to_vector() auto dd  = aa.begin() + 5;
+    auto                dd3 = aa.end() + 8;
+    auto                dd4 = dd3 - dd;
+
+    std::sort(aa.begin(), aa.end(), std::greater<>());
+
+    for (auto& d : aa) {
+        std::cout << d << std::endl;
+    }
 
     return 0;
 }

@@ -26,7 +26,7 @@ private:
         uint32_t element_offset; // offset relative to part
     };
 
-    [[nodiscard]] ElementInfo find_element(size_t element_index) const {
+    ElementInfo find_element(size_t element_index) const {
         uint32_t estimate_part_index  = part_offsets.size() == 0 ? 0 : std::min(part_offsets.size() - 1, element_index / max_part_size);
         size_t   estimate_part_offset = estimate_part_index == 0 ? 0 : part_offsets[estimate_part_index];
 
@@ -73,42 +73,49 @@ private:
             return ElementInfo { .part_index = current_element.part_index, .element_offset = current_element.element_offset - 1 };
         else
             return ElementInfo { .part_index     = current_element.part_index - 1,
-                                 .element_offset = parts[current_element.part_index - 1].size() - 1 };
+                                 .element_offset = static_cast<uint32_t>(parts[current_element.part_index - 1].size() - 1) };
     }
 
 public:
     struct iterator {
     private:
-        partial_vector<ElementT>& p_vector;
+        partial_vector<ElementT>* p_vector;
         ElementInfo               elem_info;
         uint64_t                  elem_index;
 
         iterator(partial_vector<ElementT>& p_vector, ElementInfo elem_info, uint64_t elem_index) noexcept
-            : p_vector(p_vector), elem_info(elem_info), elem_index(elem_index) {}
+            : p_vector(&p_vector), elem_info(elem_info), elem_index(elem_index) {}
 
         friend partial_vector;
 
     public:
+        typedef iterator                        self_type;
+        typedef ElementT                        value_type;
+        typedef ElementT&                       reference;
+        typedef ElementT*                       pointer;
+        typedef std::random_access_iterator_tag iterator_category;
+        typedef ptrdiff_t                       difference_type;
+
         ElementT& operator*() noexcept {
-            return p_vector.parts[elem_info.part_index][elem_info.element_offset];
+            return p_vector->parts[elem_info.part_index][elem_info.element_offset];
         }
 
         iterator operator+(uint64_t n) const noexcept {
             iterator tmp = *this;
             tmp.elem_index += n;
-            tmp.elem_info = p_vector.find_element(tmp.elem_index);
+            tmp.elem_info = p_vector->find_element(tmp.elem_index);
             return tmp;
         }
 
         iterator& operator++() noexcept {
-            elem_info = p_vector.next_element(elem_info);
+            elem_info = p_vector->next_element(elem_info);
             elem_index++;
             return *this;
         }
 
         iterator operator++(int) noexcept {
             iterator tmp = *this;
-            elem_info    = p_vector.next_element(elem_info);
+            elem_info    = p_vector->next_element(elem_info);
             elem_index++;
             return tmp;
         }
@@ -116,21 +123,33 @@ public:
         iterator operator-(uint64_t n) const noexcept {
             iterator tmp = *this;
             tmp.elem_index -= n;
-            tmp.elem_info = p_vector.find_element(tmp.elem_index);
+            tmp.elem_info = p_vector->find_element(tmp.elem_index);
             return tmp;
         }
 
         iterator& operator--() noexcept {
-            elem_info = p_vector.previous_element(elem_info);
+            elem_info = p_vector->previous_element(elem_info);
             elem_index--;
             return *this;
         }
 
         iterator operator--(int) noexcept {
             iterator tmp = *this;
-            elem_info    = p_vector.previous_element(elem_info);
+            elem_info    = p_vector->previous_element(elem_info);
             elem_index--;
             return tmp;
+        }
+
+        friend ptrdiff_t operator-(iterator const& a, iterator const& b) noexcept {
+            return a.elem_index - b.elem_index;
+        }
+
+        friend bool operator<(iterator const& a, iterator const& b) noexcept {
+            return a.elem_index < b.elem_index;
+        }
+
+        friend bool operator>(iterator const& a, iterator const& b) noexcept {
+            return a.elem_index > b.elem_index;
         }
 
         friend bool operator==(iterator const& a, iterator const& b) noexcept {
@@ -143,36 +162,43 @@ public:
     };
     struct const_iterator {
     private:
-        partial_vector<ElementT> const& p_vector;
+        const partial_vector<ElementT>* p_vector;
         ElementInfo                     elem_info;
         uint64_t                        elem_index;
 
         const_iterator(partial_vector<ElementT> const& p_vector, ElementInfo elem_info, uint64_t elem_index) noexcept
-            : p_vector(p_vector), elem_info(elem_info), elem_index(elem_index) {}
+            : p_vector(&p_vector), elem_info(elem_info), elem_index(elem_index) {}
 
         friend partial_vector;
 
     public:
+        typedef const_iterator                  self_type;
+        typedef ElementT                        value_type;
+        typedef ElementT&                       reference;
+        typedef ElementT*                       pointer;
+        typedef std::random_access_iterator_tag iterator_category;
+        typedef ptrdiff_t                       difference_type;
+
         ElementT const& operator*() const noexcept {
-            return p_vector.parts[elem_info.part_index][elem_info.element_offset];
+            return p_vector->parts[elem_info.part_index][elem_info.element_offset];
         }
 
         const_iterator operator+(uint64_t n) const noexcept {
             const_iterator tmp = *this;
             tmp.elem_index += n;
-            tmp.elem_info = p_vector.find_element(tmp.elem_index);
+            tmp.elem_info = p_vector->find_element(tmp.elem_index);
             return tmp;
         }
 
         const_iterator& operator++() noexcept {
-            elem_info = p_vector.next_element(elem_info);
+            elem_info = p_vector->next_element(elem_info);
             elem_index++;
             return *this;
         }
 
         const_iterator operator++(int) noexcept {
             const_iterator tmp = *this;
-            elem_info          = p_vector.next_element(elem_info);
+            elem_info          = p_vector->next_element(elem_info);
             elem_index++;
             return tmp;
         }
@@ -180,21 +206,25 @@ public:
         const_iterator operator-(uint64_t n) const noexcept {
             const_iterator tmp = *this;
             tmp.elem_index -= n;
-            tmp.elem_info = p_vector.find_element(tmp.elem_index);
+            tmp.elem_info = p_vector->find_element(tmp.elem_index);
             return tmp;
         }
 
         const_iterator& operator--() noexcept {
-            elem_info = p_vector.previous_element(elem_info);
+            elem_info = p_vector->previous_element(elem_info);
             elem_index--;
             return *this;
         }
 
         const_iterator operator--(int) noexcept {
             const_iterator tmp = *this;
-            elem_info          = p_vector.previous_element(elem_info);
+            elem_info          = p_vector->previous_element(elem_info);
             elem_index--;
             return tmp;
+        }
+
+        friend ptrdiff_t operator-(iterator const& a, iterator const& b) noexcept {
+            return a.elem_index - b.elem_index;
         }
 
         friend bool operator==(const_iterator const& a, const_iterator const& b) noexcept {
@@ -404,7 +434,7 @@ public:
         return parts[elem_info.part_index][elem_info.element_offset];
     }
 
-    void get_data(void* output, size_t start_index, size_t count) const {
+    void get_contiguous_data(void* output, size_t start_index, size_t count) const {
         if (start_index >= size) throw std::runtime_error("StartIndex >= size");
         count = std::min(count, size - start_index);
 
@@ -424,24 +454,24 @@ public:
         }
     }
 
-    void get_data(void* output) const {
-        get_data(output, 0, SIZE_MAX);
+    void get_contiguous_data(void* output) const {
+        get_contiguous_data(output, 0, SIZE_MAX);
     }
 
-    std::vector<ElementT> get_data(size_t start_index, size_t count = SIZE_MAX) const {
+    std::vector<ElementT> to_vector(size_t start_index, size_t count = SIZE_MAX) const {
         if (start_index >= size) throw std::runtime_error("StartIndex >= size");
         count = std::min(count, size - start_index);
 
         std::vector<ElementT> data;
         data.resize(count);
 
-        get_data(data.data(), start_index, count);
+        get_contiguous_data(data.data(), start_index, count);
 
         return data;
     }
 
-    std::vector<ElementT> get_data() const {
-        return get_data(0, SIZE_MAX);
+    std::vector<ElementT> to_vector() const {
+        return to_vector(0, SIZE_MAX);
     }
 
     size_t get_size() const noexcept {
